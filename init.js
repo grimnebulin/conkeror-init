@@ -27,7 +27,7 @@
 
     interactive("reload-sites", "Reload sites directory", load_sites);
 
-    add_hook("buffer_dom_content_loaded_hook", function (buffer) {
+    add_dom_content_loaded_hook(function (buffer) {
         for (let file of sites_matching(buffer.current_uri.asciiHost))
             read_file(file, content => do_eval($$(buffer), buffer, content));
     });
@@ -37,7 +37,7 @@
         const entries = dir.directoryEntries;
         while (entries.hasMoreElements()) {
             const file = entries.getNext().QueryInterface(Ci.nsIFile);
-            if (!file.isDirectory() && /\.js$/.test(file.leafName))
+            if (/\.js$/.test(file.leafName) && !file.isDirectory())
                 yield file;
         }
     }
