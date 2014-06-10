@@ -28,8 +28,16 @@
     interactive("reload-sites", "Reload sites directory", load_sites);
 
     add_dom_content_loaded_hook(function (buffer) {
-        for (let file of sites_matching(buffer.current_uri.asciiHost))
-            read_file(file, content => do_eval($$(buffer), buffer, content));
+        for (let file of sites_matching(buffer.current_uri.asciiHost)) {
+            read_file(file, function (content) {
+                try {
+                    do_eval($$(buffer), buffer, content);
+                } catch (e) {
+                    dumpln("Error evaluating site file " +
+                           file.leafName + ": " + e);
+                }
+            });
+        }
     });
 
     function js_iter(dir) {
