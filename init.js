@@ -1,3 +1,33 @@
+//  This file is the main entry point for my Conkeror customizations.
+//  It performs the following steps:
+//
+//  Adds the "modules" subdirectory to the module load path.
+//
+//  Loads all Javascript files in the "modules" subdirectory using
+//  require().
+//
+//  Loads all Javascript files in this directory using load().
+//
+//  Records the names of all Javascript files in the "sites"
+//  subdirectory.  Sets up a buffer-loaded hook that examines the
+//  hosts from which a page was loaded; each sites file with a
+//  matching name is loaded and executed.  The following variables are
+//  available to these files:
+//
+//    buffer - The page's buffer object.
+//
+//    $ - a jQuery object for the page.
+//
+//    autoload_disqus_comments - A function which, when called,
+//    arranges for all Disqus comments on the page to be loaded
+//    automatically.
+//
+//  Sites files are re-loaded every time a matching page is loaded, so
+//  changes to the code are reflected on the next page-load.  However,
+//  the sites directory is only re-scanned when the interactive
+//  command "reload-sites" is executed.  New site files will not be
+//  noticed until this is done.
+
 (function (do_eval) {
 
     const rcdir   = make_file("/home/mcafee/conkrc");
@@ -71,4 +101,13 @@
         });
     }
 
-})(function ($, buffer, str) { eval(str) });
+})(
+    function ($, buffer, str) {
+        let (
+            autoload_disqus_comments = function () {
+                buffer.top_frame.__autoload_disqus_comments = true;
+            }
+        )
+        eval(str);
+    }
+);
