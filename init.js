@@ -46,11 +46,10 @@
     const sites = [ ];
 
     function load_sites() {
-        Array.prototype.splice.apply(
-            sites, [ 0, sites.length ].concat(
-                [ file for (file of js_iter(sitedir)) ]
-            )
-        );
+        let i = 0;
+        for (let file of js_iter(sitedir))
+            sites[i++] = file;
+        sites.length = i;
     }
 
     load_sites();
