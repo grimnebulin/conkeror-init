@@ -30,9 +30,15 @@
 
 (function (do_eval) {
 
-    const rcdir   = make_file("/home/mcafee/conkrc");
-    const modules = make_file("/home/mcafee/conkrc/modules");
-    const sitedir = make_file("/home/mcafee/conkrc/sites");
+    function new_relative_file(src, path) {
+        const copy = src.clone();
+        copy.appendRelativePath(path);
+        return copy;
+    }
+
+    const rcdir   = new_relative_file(get_home_directory(),  "conkrc");
+    const modules = new_relative_file(rcdir, "modules");
+    const sitedir = new_relative_file(rcdir, "sites");
 
     load_paths.unshift(make_uri(modules).spec);
 
