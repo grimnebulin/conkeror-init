@@ -30,6 +30,8 @@
 
 (function (do_eval) {
 
+    const SITES_VAR = "CONKEROR_SITES";
+
     function new_relative_file(src, path) {
         const copy = src.clone();
         copy.appendRelativePath(path);
@@ -38,7 +40,6 @@
 
     const rcdir   = new_relative_file(get_home_directory(),  "conkrc");
     const modules = new_relative_file(rcdir, "modules");
-    const sitedir = new_relative_file(rcdir, "sites");
 
     load_paths.unshift(make_uri(modules).spec);
 
@@ -49,18 +50,34 @@
         if (file.leafName != "init.js")
             load(file);
 
+    const env = Cc["@mozilla.org/process/environment;1"]
+          .getService(Ci.nsIEnvironment);
+
+    const site_dirs = [
+        new_relative_file(rcdir, "sites")
+    ].concat(
+        env.exists(SITES_VAR)
+            ? env.get(SITES_VAR).split(/:/).map(make_file)
+            : [ ]
+    ).filter(
+        f => f.exists() && f.isDirectory() && f.isReadable()
+    );
+
     const sites = [ ];
 
     function load_sites() {
         let i = 0;
-        for (let file of js_iter(sitedir))
-            sites[i++] = file;
+        for (let dir of site_dirs) {
+            for (let file of js_iter(dir)) {
+                sites[i++] = file;
+            }
+        }
         sites.length = i;
     }
 
     load_sites();
 
-    interactive("reload-sites", "Reload sites directory", load_sites);
+    interactive("reload-sites", "Reload site directories", load_sites);
 
     add_dom_content_loaded_hook(function (buffer) {
         for (let file of sites_matching(buffer.current_uri.asciiHost)) {
