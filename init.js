@@ -31,6 +31,7 @@
 (function (do_eval) {
 
     const SITES_VAR = "CONKEROR_SITES";
+    const INIT_VAR  = "CONKEROR_INIT";
 
     function new_relative_file(src, path) {
         const copy = src.clone();
@@ -52,6 +53,14 @@
 
     const env = Cc["@mozilla.org/process/environment;1"]
           .getService(Ci.nsIEnvironment);
+
+    if (env.exists(INIT_VAR)) {
+        for (let file of env.get(INIT_VAR).split(/:/).map(make_file)) {
+            if (file.exists() && file.isFile() && file.isReadable()) {
+                load(file);
+            }
+        }
+    }
 
     const site_dirs = [
         new_relative_file(rcdir, "sites")
