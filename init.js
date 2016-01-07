@@ -1,3 +1,5 @@
+"use strict";
+
 //  This file is the main entry point for my Conkeror customizations.
 //  It performs the following steps:
 //
@@ -140,8 +142,9 @@
                     buffer.top_frame.__autoload_disqus_comments =
                         arguments.length > 0 ? arguments[0] : true;
                 }
-            )
-            eval(str);
+            ) {
+                eval(str);
+            }
         } catch (e) {
             dumpln(e);
         }
