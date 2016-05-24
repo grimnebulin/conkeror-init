@@ -137,14 +137,11 @@
 })(
     function ($, buffer, str) {
         try {
-            let (
-                autoload_disqus_comments = function () {
-                    buffer.top_frame.__autoload_disqus_comments =
-                        arguments.length > 0 ? arguments[0] : true;
-                }
-            ) {
-                eval(str);
-            }
+            let autoload_disqus_comments = function () {
+                buffer.top_frame.__autoload_disqus_comments =
+                    arguments.length > 0 ? arguments[0] : true;
+            };
+            eval(str);
         } catch (e) {
             dumpln(e);
         }
