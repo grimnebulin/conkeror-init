@@ -214,10 +214,9 @@ function WebRequest(url, callback, responseType) {
 //  command "reload-sites" is executed.  New site files will not be
 //  noticed until this is done.
 
-(function (do_eval) {
+(function () {
 
-    const SITES_VAR = "CONKEROR_SITES";
-    const INIT_VAR  = "CONKEROR_INIT";
+    const PACKAGES_VAR = "CONKEROR_PACKAGES";
 
     function new_relative_file(src, path) {
         const copy = src.clone();
@@ -225,38 +224,48 @@ function WebRequest(url, callback, responseType) {
         return copy;
     }
 
-    const rcdir   = new_relative_file(get_home_directory(),  "conkrc");
-    const modules = new_relative_file(rcdir, "modules");
+    const site_dirs = [ ];
 
-    load_paths.unshift(make_uri(modules).spec);
+    function new_file(path) {
+        const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsILocalFile);
+        file.initWithPath(path);
+        return file;
+    }
 
-    for (let file of js_iter(modules))
-        require(file);
+    function import_package(dir) {
+        const modules = new_relative_file(dir, "modules");
+        if (is_readable_directory(modules)) {
+            load_paths.unshift(make_uri(modules).spec);
+            for (let file of js_iter(modules)) {
+                require(file);
+            }
+        }
+        for (let file of js_iter(dir)) {
+            load(file); // How/whether to omit this init.js?
+        }
+        const sites = new_relative_file(dir, "sites");
+        if (is_readable_directory(sites)) {
+            site_dirs.push(sites);
+        }
+    }
 
-    for (let file of js_iter(rcdir))
-        if (file.leafName != "init.js")
-            load(file);
+    const site_vars = { };
+
+    conkeror.register_site_variables = function (name, callback) {
+        site_vars[name] = callback;
+    };
 
     const env = Cc["@mozilla.org/process/environment;1"]
           .getService(Ci.nsIEnvironment);
 
-    if (env.exists(INIT_VAR)) {
-        for (let file of env.get(INIT_VAR).split(/:/).map(make_file)) {
-            if (file.exists() && file.isFile() && file.isReadable()) {
-                load(file);
+    if (env.exists(PACKAGES_VAR)) {
+        for (let dir of env.get(PACKAGES_VAR).split(/:/).map(new_file)) {
+            if (is_readable_directory(dir)) {
+                dumpln("Importing: " + dir.path);
+                import_package(dir);
             }
         }
     }
-
-    const site_dirs = [
-        new_relative_file(rcdir, "sites")
-    ].concat(
-        env.exists(SITES_VAR)
-            ? env.get(SITES_VAR).split(/:/).map(make_file)
-            : [ ]
-    ).filter(
-        f => f.exists() && f.isDirectory() && f.isReadable()
-    );
 
     const sites = [ ];
 
@@ -275,14 +284,22 @@ function WebRequest(url, callback, responseType) {
     interactive("reload-sites", "Reload site directories", load_sites);
 
     add_dom_content_loaded_hook(function (buffer) {
+        let f = "(function (content, buffer";
+        const args = [ buffer ];
+        for (let name in site_vars) {
+            const foo = site_vars[name](buffer);
+            for (let name in foo) {
+                if (/^[\w$]$/.test(name) && !/^[0-9]/.test(name)) {
+                    f += ", " + name;
+                    args.push(foo[name]);
+                }
+            }
+        }
+        f += ") { try { eval(content) } catch (e) { dumpln('Error evaluating site file ???') } })";
+        const g = eval(f);
         for (let file of sites_matching(buffer.current_uri.asciiHost)) {
             read_file(file, function (content) {
-                try {
-                    do_eval($$(buffer), buffer, content);
-                } catch (e) {
-                    dumpln("Error evaluating site file " +
-                           file.leafName + ": " + e);
-                }
+                g.apply(null, [ content ].concat(args));
             });
         }
     });
@@ -300,17 +317,19 @@ function WebRequest(url, callback, responseType) {
     function sites_matching(host) {
         for (let file of sites) {
             const name = file.leafName.substr(0, file.leafName.length - 3);
-            if (host == name || host.endsWith("." + name))
+            if (host === name || host.endsWith("." + name))
                 yield file;
         }
     }
 
-    Components.utils.import("resource://gre/modules/NetUtil.jsm");
+    const scope = { };
+
+    Components.utils.import("resource://gre/modules/NetUtil.jsm", scope);
 
     function read_file(file, callback) {
-        NetUtil.asyncFetch(file, function (stream, status) {
+        scope.NetUtil.asyncFetch(file, function (stream, status) {
             if (Components.isSuccessCode(status)) {
-                const content = NetUtil.readInputStreamToString(
+                const content = scope.NetUtil.readInputStreamToString(
                     stream, stream.available()
                 );
                 callback(content);
@@ -318,16 +337,8 @@ function WebRequest(url, callback, responseType) {
         });
     }
 
-})(
-    function ($, buffer, str) {
-        try {
-            let autoload_disqus_comments = function () {
-                buffer.top_frame.__autoload_disqus_comments =
-                    arguments.length > 0 ? arguments[0] : true;
-            };
-            eval(str);
-        } catch (e) {
-            dumpln(e);
-        }
+    function is_readable_directory(file) {
+        return file.exists() && file.isReadable() && file.isDirectory();
     }
-);
+
+})();
