@@ -197,16 +197,9 @@ function WebRequest(url, callback, responseType) {
 //  Records the names of all Javascript files in the "sites"
 //  subdirectory.  Sets up a buffer-loaded hook that examines the
 //  hosts from which a page was loaded; each sites file with a
-//  matching name is loaded and executed.  The following variables are
-//  available to these files:
-//
-//    buffer - The page's buffer object.
-//
-//    $ - a jQuery object for the page.
-//
-//    autoload_disqus_comments - A function which, when called,
-//    arranges for all Disqus comments on the page to be loaded
-//    automatically.
+//  matching name is loaded and executed.  The "buffer" variable is
+//  made available when these files are evaluated, as well as any
+//  variables registered via the register_site_variables function.
 //
 //  Sites files are re-loaded every time a matching page is loaded, so
 //  changes to the code are reflected on the next page-load.  However,
