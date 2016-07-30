@@ -1,0 +1,13 @@
+diff --git a/modules/buffer.js b/modules/buffer.js
+index 8d02a97..b69ee16 100644
+--- a/modules/buffer.js
++++ b/modules/buffer.js
+@@ -153,7 +153,7 @@ function buffer (window) {
+         }, true /* capture */);
+ 
+     this.browser.addEventListener("DOMContentLoaded", function (event) {
+-            buffer_dom_content_loaded_hook.run(buffer);
++            buffer_dom_content_loaded_hook.run(buffer, event);
+         }, true /* capture */);
+ 
+     this.window.setTimeout(function () { create_buffer_late_hook.run(buffer); }, 0);

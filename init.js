@@ -31,18 +31,19 @@
 //  on-dom-loaded-provide-event.patch file in this directory must be
 //  applied to Conkeror's source.
 
-let (
-    buffer_loaded_flag = "__conkeror_loaded_buffer",
-    callbacks = [ ]
-) {
+const BUFFER_LOADED_FLAG = "__conkeror_loaded_buffer";
+
+{
+    const callbacks = [ ];
+
     const add_dom_content_loaded_hook = function (callback) {
         callbacks.push(callback);
     };
 
     add_hook("buffer_dom_content_loaded_hook", function (buffer, event) {
-        if (!(buffer_loaded_flag in buffer.top_frame) &&
+        if (!(BUFFER_LOADED_FLAG in buffer.top_frame) &&
             event.target.documentURI == buffer.top_frame.location) {
-            buffer.top_frame[buffer_loaded_flag] = true;
+            buffer.top_frame[BUFFER_LOADED_FLAG] = true;
             for (let callback of callbacks) {
                 try {
                     callback(buffer);
@@ -54,158 +55,6 @@ let (
     });
 
 }
-
-//  A simple wrapper around add_dom_content_loaded_hook.  The
-//  on_dom_loaded function takes a RegExp object and a callback; the
-//  callback will be called whenever a page is loaded whose
-//  originating host name matches the RegExp.  If the optional third
-//  argument to on_dom_loaded is true, then the callback will be
-//  called with the buffer object for the page; otherwise a jQuery
-//  object will be passed.
-
-let (tests = [ ]) {
-    const on_dom_loaded = function (hostpat, callback, want_buffer) {
-        tests.push([ hostpat, callback, want_buffer ]);
-    };
-
-    add_dom_content_loaded_hook(function (buffer) {
-        const host = buffer.current_uri.asciiHost;
-        for (let [hostpat, callback, want_buffer] of tests)
-            if (hostpat.test(host))
-                callback(want_buffer ? buffer : $$(buffer));
-    });
-
-}
-
-//  This function returns a pair of functions that take care of some
-//  of the boilerplate required to define a page mode.  The first
-//  function in the returned list is a mode-enable function suitable
-//  for passing as the third argument to Conkeror's built-in
-//  define_page_mode function, and the second function is a
-//  mode-disable function suitable for passing as the fourth argument
-//  to define_page_mode.  MODALITY is as per Conkeror's built-in
-//  define_page_mode function; the optional CLASSES is a mapping the
-//  will be added to the buffer's default_browser_object_classes
-//  object in the enable function and removed in the disable function.
-//
-//  Example of use:
-//
-//  let ([enable, disable] = setup_mode({ normal: foo_keymap }))
-//    define_page_mode("foo-mode", /foo\.com/, enable, disable);
-
-function setup_mode(modality, classes) {
-    classes = classes || { };
-    function enable(buffer) {
-        buffer.content_modalities.push(modality);
-        for (let [key, value] in Iterator(classes))
-            buffer.default_browser_object_classes[key] = value;
-    }
-    function disable(buffer) {
-        const i = buffer.content_modalities.indexOf(modality);
-        if (i >= 0) buffer.content_modalities.splice(i, 1);
-        for (let key in Iterator(classes, true))
-            delete buffer.default_browser_object_classes[key];
-    }
-    return [ enable, disable ];
-}
-
-//  An implementation of a Maybe monad.
-//
-//  The maybe() function returns either a Some object if its argument
-//  is anything other than null or undefined, and a None object
-//  otherwise.
-//
-//  Originally based on https://gist.github.com/andyhd/1618403.
-
-function maybe(value) {
-    return value !== null && value !== undefined ? Some(value) : None();
-}
-
-function Some(value) {
-    const obj = {
-        map: f => maybe(f(value)),
-        foreach: f => (f(value), obj),
-        orElse: _ => obj,
-        getOrElse: _ => value,
-        get empty() false,
-        get nonempty() true
-    };
-    return obj;
-}
-
-function None() {
-    const obj = {
-        map: _ => obj,
-        foreach: _ => obj,
-        orElse: f => f(),
-        getOrElse: x => x,
-        get empty() true,
-        get nonempty() false
-    };
-    return obj;
-}
-
-function make_descriptors(data) {
-    let out = "", err = "";
-    const fds = [
-        { output: async_binary_string_writer(data || "")  },
-        { input:  async_binary_reader(s => out += s || "") },
-        { input:  async_binary_reader(s => err += s || "") }
-    ];
-    return [ fds, () => out, () => err ];
-}
-
-function hasOwn(obj, key) {
-    return Object.prototype.hasOwnProperty.call(obj, key);
-}
-
-function WebRequest(url, callback, responseType) {
-    let async = true;
-    let headers = { };
-    return {
-        async: function (flag) { async = flag; return this },
-        withHeader: function (name, value) { headers[name] = value; return this },
-        responseType: function (newType) { responseType = newType; return this },
-        start: function () {
-            const req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
-                .createInstance(Ci.nsIXMLHttpRequest);
-            req.open("GET", url, async);
-            req.responseType = responseType !== undefined ? responseType : "text";
-            req.onreadystatechange = function () {
-                if (this.readyState == 4) {
-                    callback(this.response);
-                }
-            };
-            for (let header in headers) {
-                req.setRequestHeader(header, headers[header]);
-            }
-            req.send(null);
-        }
-    };
-}
-
-//  This file is the main entry point for my Conkeror customizations.
-//  It performs the following steps:
-//
-//  Adds the "modules" subdirectory to the module load path.
-//
-//  Loads all Javascript files in the "modules" subdirectory using
-//  require().
-//
-//  Loads all Javascript files in this directory using load().
-//
-//  Records the names of all Javascript files in the "sites"
-//  subdirectory.  Sets up a buffer-loaded hook that examines the
-//  hosts from which a page was loaded; each sites file with a
-//  matching name is loaded and executed.  The "buffer" variable is
-//  made available when these files are evaluated, as well as any
-//  variables registered via the register_site_variables function.
-//
-//  Sites files are re-loaded every time a matching page is loaded, so
-//  changes to the code are reflected on the next page-load.  However,
-//  the sites directory is only re-scanned when the interactive
-//  command "reload-sites" is executed.  New site files will not be
-//  noticed until this is done.
 
 (function () {
 
