@@ -280,15 +280,17 @@ function WebRequest(url, callback, responseType) {
         let f = "(function (content, buffer";
         const args = [ buffer ];
         for (let name in site_vars) {
-            const foo = site_vars[name](buffer);
-            for (let name in foo) {
-                if (/^[\w$]$/.test(name) && !/^[0-9]/.test(name)) {
-                    f += ", " + name;
-                    args.push(foo[name]);
+            const vars = site_vars[name](buffer);
+            for (let vname in vars) {
+                if (/^[\w$]+$/.test(vname) && !/^[0-9]/.test(vname)) {
+                    f += ", " + vname;
+                    args.push(vars[vname]);
+                } else {
+                    dumpln("Ignoring invalid site variable \"" + vname + "\" registered by " + name);
                 }
             }
         }
-        f += ") { try { eval(content) } catch (e) { dumpln('Error evaluating site file ???') } })";
+        f += ") { try { eval(content) } catch (e) { dumpln('Error evaluating site file ' + file + ': ' + e) } })";
         const g = eval(f);
         for (let file of sites_matching(buffer.current_uri.asciiHost)) {
             read_file(file, function (content) {
