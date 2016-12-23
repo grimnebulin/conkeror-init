@@ -33,28 +33,25 @@
 
 const BUFFER_LOADED_FLAG = "__conkeror_loaded_buffer";
 
-{
-    const callbacks = [ ];
+const callbacks = [ ];
 
-    const add_dom_content_loaded_hook = function (callback) {
-        callbacks.push(callback);
-    };
+function add_dom_content_loaded_hook(callback) {
+    callbacks.push(callback);
+}
 
-    add_hook("buffer_dom_content_loaded_hook", function (buffer, event) {
-        if (!(BUFFER_LOADED_FLAG in buffer.top_frame) &&
-            event.target.documentURI == buffer.top_frame.location) {
-            buffer.top_frame[BUFFER_LOADED_FLAG] = true;
-            for (let callback of callbacks) {
-                try {
-                    callback(buffer);
-                } catch (e) {
-                    dumpln("dom-content-loaded callback failed: " + e);
-                }
+add_hook("buffer_dom_content_loaded_hook", function (buffer, event) {
+    if (!(BUFFER_LOADED_FLAG in buffer.top_frame) &&
+        event.target.documentURI == buffer.top_frame.location) {
+        buffer.top_frame[BUFFER_LOADED_FLAG] = true;
+        for (let callback of callbacks) {
+            try {
+                callback(buffer);
+            } catch (e) {
+                dumpln("dom-content-loaded callback failed: " + e);
             }
         }
-    });
-
-}
+    }
+});
 
 (function () {
 
