@@ -123,24 +123,28 @@ add_hook("buffer_dom_content_loaded_hook", function (buffer, event) {
     interactive("reload-sites", "Reload site directories", load_sites);
 
     add_dom_content_loaded_hook(function (buffer) {
-        let f = "(function (content, buffer";
-        const args = [ buffer ];
+        let f = "(function (";
+        const args = [ ];
         for (let name in site_vars) {
             const vars = site_vars[name](buffer);
             for (let vname in vars) {
                 if (/^[\w$]+$/.test(vname) && !/^[0-9]/.test(vname)) {
-                    f += ", " + vname;
+                    f += vname + ", ";
                     args.push(vars[vname]);
                 } else {
                     dumpln("Ignoring invalid site variable \"" + vname + "\" registered by " + name);
                 }
             }
         }
-        f += ") { try { eval(content) } catch (e) { dumpln('Error evaluating site file ' + file + ': ' + e) } })";
+        f += "buffer, content) { eval(content) })";
         const g = eval(f);
         for (let file of sites_matching(buffer.current_uri.asciiHost)) {
             read_file(file, function (content) {
-                g.apply(null, [ content ].concat(args));
+                try {
+                    g.apply(null, args.concat([ buffer, content ]));
+                } catch (e) {
+                    dumpln("Error evaluating site file " + file.path + ": " + e);
+                }
             });
         }
     });
