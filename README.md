@@ -68,9 +68,10 @@ be made available to site files by using the following function.
   visiting the current page.  It should return an object.  For each
   key-value pair in the object, a variable with that name and value
   will be made available to each site file when it is evaluated.  For
-  example, the [conkeror-jquery](../conkeror-jquery) package registers
-  the variable `$` as a jQuery object for the current buffer's HTML
-  content.
+  example, the
+  [conkeror-jquery](https://github.com/grimnebulin/conkeror-jquery)
+  package registers the variable `$` as a jQuery object for the
+  current buffer's HTML content.
   
   Only names in the returned object that look like Javascript variable
   names (that is, they consist only of `$` characters or characters

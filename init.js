@@ -88,10 +88,10 @@ add_hook("buffer_dom_content_loaded_hook", function (buffer, event) {
         }
     }
 
-    const site_vars = { };
+    const site_vars = new Map;
 
     conkeror.register_site_variables = function (name, callback) {
-        site_vars[name] = callback;
+        site_vars.set(name, callback);
     };
 
     const env = Cc["@mozilla.org/process/environment;1"]
@@ -125,8 +125,8 @@ add_hook("buffer_dom_content_loaded_hook", function (buffer, event) {
     add_dom_content_loaded_hook(function (buffer) {
         let f = "(function (";
         const args = [ ];
-        for (let name in site_vars) {
-            const vars = site_vars[name](buffer);
+        for (let [name, callback] of site_vars.entries()) {
+            const vars = callback(buffer);
             for (let vname in vars) {
                 if (/^[\w$]+$/.test(vname) && !/^[0-9]/.test(vname)) {
                     f += vname + ", ";
